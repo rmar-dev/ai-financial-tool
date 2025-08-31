@@ -1,32 +1,62 @@
-"""Tests for the main module."""
+"""Tests for the AI Financial Tool main module."""
+
+from unittest.mock import Mock, patch
 
 import pytest
 
-from new_python_project.main import greet, setup_logging
+from ai_financial_tool.main import FinancialAnalyzer, setup_logging
 
 
-def test_greet_with_name() -> None:
-    """Test greeting with a specific name."""
-    result = greet("Alice")
-    assert result == "Hello, Alice!"
+class TestFinancialAnalyzer:
+    """Tests for the FinancialAnalyzer class."""
 
+    def test_init(self) -> None:
+        """Test FinancialAnalyzer initialization."""
+        analyzer = FinancialAnalyzer()
+        assert analyzer.data is None
+        assert analyzer.logger is not None
 
-def test_greet_without_name() -> None:
-    """Test greeting without a name."""
-    result = greet()
-    assert result == "Hello, World!"
+    @patch("ai_financial_tool.main.yf")
+    def test_fetch_stock_data_success(self, mock_yf: Mock) -> None:
+        """Test successful stock data fetching."""
+        # Mock yfinance
+        mock_ticker = Mock()
+        mock_data = Mock()
+        mock_ticker.history.return_value = mock_data
+        mock_yf.Ticker.return_value = mock_ticker
 
+        analyzer = FinancialAnalyzer()
+        result = analyzer.fetch_stock_data("AAPL")
 
-def test_greet_with_none() -> None:
-    """Test greeting with None as name."""
-    result = greet(None)
-    assert result == "Hello, World!"
+        assert result == mock_data
+        assert analyzer.data == mock_data
+        mock_yf.Ticker.assert_called_once_with("AAPL")
+        mock_ticker.history.assert_called_once_with(period="1y")
 
+    def test_fetch_stock_data_no_yfinance(self) -> None:
+        """Test behavior when yfinance is not available."""
+        with patch("ai_financial_tool.main.yf", None):
+            analyzer = FinancialAnalyzer()
+            result = analyzer.fetch_stock_data("AAPL")
+            assert result is None
 
-def test_greet_with_empty_string() -> None:
-    """Test greeting with empty string."""
-    result = greet("")
-    assert result == "Hello, World!"
+    def test_calculate_returns_no_data(self) -> None:
+        """Test calculate_returns with no data."""
+        analyzer = FinancialAnalyzer()
+        result = analyzer.calculate_returns()
+        assert result is None
+
+    def test_analyze_volatility_no_data(self) -> None:
+        """Test analyze_volatility with no data."""
+        analyzer = FinancialAnalyzer()
+        result = analyzer.analyze_volatility()
+        assert result is None
+
+    def test_generate_summary_no_data(self) -> None:
+        """Test generate_summary with no data."""
+        analyzer = FinancialAnalyzer()
+        result = analyzer.generate_summary("AAPL")
+        assert "error" in result
 
 
 def test_setup_logging() -> None:
@@ -37,17 +67,14 @@ def test_setup_logging() -> None:
     setup_logging("WARNING")
 
 
-class TestGreetParameterized:
-    """Parametrized tests for the greet function."""
+class TestSetupLoggingParameterized:
+    """Parametrized tests for the setup_logging function."""
 
     @pytest.mark.parametrize(
-        "name,expected",
-        [
-            ("Bob", "Hello, Bob!"),
-            ("Charlie", "Hello, Charlie!"),
-        ],
+        "level",
+        ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
     )
-    def test_greet_parametrized(self, name: str, expected: str) -> None:
-        """Test greet function with various inputs."""
-        result = greet(name)
-        assert result == expected
+    def test_setup_logging_levels(self, level: str) -> None:
+        """Test setup_logging with various log levels."""
+        # Should not raise any exceptions
+        setup_logging(level)

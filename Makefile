@@ -1,4 +1,4 @@
-# Makefile for new-python-project
+# Makefile for ai-financial-tool
 
 .PHONY: help install install-dev test lint format type-check clean docs
 
